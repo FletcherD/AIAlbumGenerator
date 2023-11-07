@@ -4,6 +4,8 @@ import re
 import json
 import random
 import glob
+import langdetect
+from tqdm import tqdm
 
 imDir = 'images'
 metadataFilePath = os.path.join(imDir, 'metadata.jsonl')
@@ -68,9 +70,13 @@ def removeImagesWithoutMetadata():
 
 def writeTextTrainingData():
     with open('releases.txt', 'w') as f:
-        for idNum in releaseIds:
+        for idNum in tqdm(releaseIds):
             try:
                 release = database.getRelease(idNum)
+                releaseStr = getTrainingStr(release)
+                language = langdetect.detect(releaseStr)
+                if language != 'en':
+                    continue
                 f.write(getTrainingStr(release))
                 f.write('<|endoftext|>\n')
             except Exception as e:

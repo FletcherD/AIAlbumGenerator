@@ -29,8 +29,7 @@ def processRelease(text):
         release['year']   = getField(lines[3], 'Year')
         release['tracklist'] = '\n'.join(['- '+l.strip() for l in lines[4:]])
 
-        s = 'Artist: {}\n'.format(release['artist'])
-        s += 'Title: {}\n'.format(release['title'])
+        s = '{} - {}\n'.format(release['artist'], release['title'])
         s += 'Genre: {}\n'.format(release['genre'])
         s += 'Year: {}\n\n'.format(release['year'])
         s += release['tracklist']

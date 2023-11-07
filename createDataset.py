@@ -13,6 +13,9 @@ metadataFilePath = os.path.join(imDir, 'metadata.jsonl')
 prompt = """The album artwork for an album titled "{title}" \
 by the artist {artistStr}, released in {year}, in the genres {genreStr}"""
 
+bosToken = "<s>"
+eosToken = '</s>'
+
 def getArtistStr(release):
     r = ''
     if 'artists' not in release:
@@ -46,8 +49,7 @@ def getPromptStr(release):
     return prompt.format(**release, artistStr=getArtistStr(release), genreStr=getGenreStr(release))
 
 def getTrainingStr(release):
-    r = ''
-    r += 'Artist: {}\n'.format(getArtistStr(release))
+    r = 'Artist: {}\n'.format(getArtistStr(release))
     r += 'Title: {}\n'.format(release['title'])
     #r += '{} - {}\n'.format(getArtistStr(release), release['title'])
     r += 'Genre: {}\n'.format(getGenreStr(release))
@@ -69,7 +71,7 @@ def removeImagesWithoutMetadata():
             removeImage(idNum)
 
 def writeTextTrainingData():
-    with open('releases.txt', 'w') as f:
+    with open('releases.jsonl', 'w') as f:
         for idNum in tqdm(releaseIds):
             try:
                 release = database.getRelease(idNum)
@@ -77,8 +79,9 @@ def writeTextTrainingData():
                 language = langdetect.detect(releaseStr)
                 if language != 'en':
                     continue
-                f.write(getTrainingStr(release))
-                f.write('<|endoftext|>\n')
+                trainingStr = getTrainingStr(release)
+                trainingJson = {'note': '### '+trainingStr}
+                f.write(json.dumps(trainingJson))
             except Exception as e:
                 print(e)
                 print(idNum)

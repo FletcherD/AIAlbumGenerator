@@ -33,8 +33,11 @@ tokenizer = AutoTokenizer.from_pretrained(
 )
 tokenizer.pad_token = tokenizer.eos_token
 
+def formatting_func(example):
+    text = f"{example['note']}"
+    return text
 def generate_and_tokenize_prompt(prompt):
-    return tokenizer(prompt)
+    return tokenizer(formatting_func(prompt))
 
 tokenized_train_dataset = train_dataset.map(generate_and_tokenize_prompt)
 

@@ -15,7 +15,7 @@ train_dataset = load_dataset('json', data_files='releases.jsonl', split='train')
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
-base_model_id = "llama/llama-2-7b/7B"
+base_model_id = "nousresearch/llama-2-7b-hf"
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_use_double_quant=True,
@@ -67,7 +67,6 @@ config = LoraConfig(
 )
 
 model = get_peft_model(model, config)
-print_trainable_parameters(model)
 
 # Apply the accelerator. You can comment this out to remove the accelerator.
 model = accelerator.prepare_model(model)
@@ -76,8 +75,7 @@ import transformers
 from datetime import datetime
 
 project = "journal-finetune"
-base_model_name = "nousresearch/llama-2-7b-hf"
-run_name = base_model_name + "-" + project
+run_name = base_model_id + "-" + project
 output_dir = "./" + run_name
 
 tokenizer.pad_token = tokenizer.eos_token
@@ -85,7 +83,6 @@ tokenizer.pad_token = tokenizer.eos_token
 trainer = transformers.Trainer(
     model=model,
     train_dataset=tokenized_train_dataset,
-    eval_dataset=tokenized_val_dataset,
     args=transformers.TrainingArguments(
         output_dir=output_dir,
         warmup_steps=1,
@@ -100,7 +97,6 @@ trainer = transformers.Trainer(
         save_steps=50,                # Save checkpoints every 50 steps
         evaluation_strategy="steps", # Evaluate the model every logging step
         eval_steps=50,               # Evaluate and save checkpoints every 50 steps
-        do_eval=True,                # Perform evaluation at the end of training
         #report_to="wandb",           # Comment this out if you don't want to use weights & baises
         run_name=f"{run_name}-{datetime.now().strftime('%Y-%m-%d-%H-%M')}"          # Name of the W&B run (optional)
     ),

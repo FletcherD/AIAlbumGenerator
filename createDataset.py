@@ -81,7 +81,7 @@ def writeTextTrainingData():
                     continue
                 trainingStr = getTrainingStr(release)
                 trainingJson = {'note': '### '+trainingStr}
-                f.write(json.dumps(trainingJson))
+                f.write(json.dumps(trainingJson) + '\n')
             except Exception as e:
                 print(e)
                 print(idNum)

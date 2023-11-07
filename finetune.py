@@ -76,7 +76,7 @@ import transformers
 from datetime import datetime
 
 project = "journal-finetune"
-base_model_name = "llama2-7b"
+base_model_name = "nousresearch/llama-2-7b-hf"
 run_name = base_model_name + "-" + project
 output_dir = "./" + run_name
 

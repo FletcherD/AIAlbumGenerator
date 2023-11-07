@@ -23,7 +23,7 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_compute_dtype=torch.bfloat16
 )
 
-model = AutoModelForCausalLM.from_pretrained(base_model_id)
+model = AutoModelForCausalLM.from_pretrained(base_model_id, quantization_config=bnb_config)
 
 tokenizer = AutoTokenizer.from_pretrained(
     base_model_id,

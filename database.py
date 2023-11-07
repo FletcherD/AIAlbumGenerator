@@ -36,10 +36,14 @@ def addRelease(idNum, data):
         except sqlite3.OperationalError as e:
             time.sleep(1)
 
+def deleteRelease(idNum) :
+    r = cur.execute("DELETE FROM releases WHERE id=?", [idNum])
+
 def removeBadReleases():
     for idNum in getAllReleaseIds():
         try:
             getRelease(idNum)
+
         except Exception as e:
             print(idNum)
-            r = cur.execute("DELETE FROM releases WHERE id=?", [idNum])
+            deleteRelease(idNum)

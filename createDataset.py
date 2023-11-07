@@ -72,7 +72,7 @@ def removeImagesWithoutMetadata():
 
 def writeTextTrainingData():
     with open('releases.jsonl', 'w') as f:
-        for idNum in tqdm(releaseIds):
+        for idNum in tqdm(releaseIds[:300000]):
             try:
                 release = database.getRelease(idNum)
                 releaseStr = getTrainingStr(release)

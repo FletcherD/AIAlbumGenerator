@@ -6,10 +6,9 @@ import discogsApi
 import openAI
 import twitterApi
 
-modelPath = './finetuned/checkpoint/'
+modelPath = './finetuned/'
 
-bosToken = "<s>"
-eosToken = '</s>'
+eosToken = '<|endoftext|>'
 
 #TODO: if artist == Various and tracks > 25
 def processRelease(text):

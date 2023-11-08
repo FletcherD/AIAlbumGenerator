@@ -36,7 +36,8 @@ tokenizer = AutoTokenizer.from_pretrained(
 )
 tokenizer.pad_token = tokenizer.eos_token
 
-def tokenize(prompt):
+def tokenize(data_point):
+    prompt = data_point["note"]
     result = tokenizer(
         prompt,
         truncation=True,

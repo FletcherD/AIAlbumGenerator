@@ -4,7 +4,7 @@ Created on Mon Nov  1 14:59:53 2021
 
 @author: fdost
 """
-
+import random
 import time
 import os
 import requests
@@ -12,12 +12,10 @@ from PIL import Image
 import subprocess
 from multiprocessing import Pool
 
-from discogsApi import getReleaseInfo
+import DiscogsDataset
 
-import database
+os.makedirs(DiscogsDataset.IMAGE_DIR_PATH, exist_ok=True)
 
-imDir = 'images'
-os.makedirs(imDir, exist_ok=True)
 
 def getImageUrl(release):
     if 'images' in release:
@@ -29,12 +27,13 @@ def getImageUrl(release):
     else:
         return None
 
+
 def downloadImage(idNum):
-    imPath = os.path.join(imDir, str(idNum)+'.jpg')
+    imPath = os.path.join(DiscogsDataset.IMAGE_DIR_PATH, str(idNum)+'.jpg')
     if os.path.exists(imPath):
         return False
     
-    release = database.getRelease(idNum)
+    release = DiscogsDataset.getRelease(idNum)
     
     url = getImageUrl(release)
     # if url is None:
@@ -53,13 +52,15 @@ def downloadImage(idNum):
 
     dlCmd = ['yt-dlp', '-q', url, '-o', imPath]
     result = False
-    while not result:
-        r = subprocess.run(dlCmd)
-        if r.returncode == 0:
-            result = True
-        else:
-            result = False
-            time.sleep(10)
+    #while not result:
+    r = subprocess.run(dlCmd)
+    if r.returncode == 0:
+        result = True
+    else:
+        result = False
+        print(r.returncode)
+        time.sleep(30)
+
 
 def downloadImageTry(idNum):
     try:
@@ -67,30 +68,34 @@ def downloadImageTry(idNum):
     except Exception as e:
         print(idNum, e)
 
+
 def removeImageIfBad(idNum):
-    imPath = os.path.join(imDir, str(idNum) + '.jpg')
+    imPath = os.path.join(DiscogsDataset.IMAGE_DIR_PATH, str(idNum) + '.jpg')
     if not os.path.exists(imPath):
         return False
     try:
         Image.open(imPath)
     except:
         print("Removing "+imPath)
-        os.remove(imPath)
-    
+        #os.remove(imPath)
+
+
 def getAllImages():
-    releaseIds = database.getAllReleaseIds()
+    releaseIds = DiscogsDataset.getAllReleaseIds()
     print('{} entries'.format(len(releaseIds)))
+    random.shuffle(releaseIds)
     
-    usePool = False
-    
-    if usePool:
-        with Pool(2) as p:
-            p.map(removeImageIfBad, releaseIds)
+    if N_WORKERS > 1:
+        with Pool(N_WORKERS) as p:
+            #p.map(removeImageIfBad, releaseIds)
             p.map(downloadImageTry, releaseIds)
     else:
         for idNum in releaseIds:
+            #removeImageIfBad(idNum)
             downloadImageTry(idNum)
             #time.sleep(1)
+
+N_WORKERS = 1
             
 if __name__ == '__main__':
     getAllImages()

@@ -28,6 +28,18 @@ def getAllReleaseIds():
     return r
 
 
+def iterateReleases():
+    """Generator that yields (id, release_data) tuples for all releases.
+    Much more efficient than getAllReleaseIds() + getRelease() pattern."""
+    r = cur.execute("SELECT id, jsonData FROM releases")
+    for row in r:
+        try:
+            yield row[0], json.loads(row[1])
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON for release ID {row[0]}: {e}")
+            continue
+
+
 def addRelease(idNum, data):
     cur.execute("INSERT INTO releases VALUES (?, ?)", (idNum, json.dumps(data)))
     while True:

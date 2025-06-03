@@ -66,7 +66,7 @@ def generate():
     transformers.set_seed(timestamp)
 
     release = None
-    while release is None:
+    while True:
         releaseDescription = inferAlbumDescription(tokenizer, generator, temperature=1.3)
         try:
             release = parseAlbumDescription(releaseDescription)
@@ -85,6 +85,7 @@ def generate():
                 continue
         else:
             print('--- Valid release, using ---')
+            break
 
     imagePromptStr = getAlbumImagePrompt(release)
     print(imagePromptStr)

@@ -1,5 +1,4 @@
 import math
-
 import DiscogsDataset
 import os
 import csv
@@ -8,6 +7,7 @@ import json
 import random
 import glob
 import langdetect
+import traceback
 from tqdm import tqdm
 
 import torch
@@ -82,22 +82,25 @@ def createAlbumDescriptionDataset():
         except Exception as e:
             print(row)
         key = (artist_norm, album_norm)
-        reviews_dict[key] = row['small_text']
+        reviews_dict[key] = row['small_text'] if isinstance(row["small_text"], str) else row["review"]
     
     print(f"Loaded {len(reviews_dict)} reviews for matching")
     
-    releaseIds = DiscogsDataset.getAllReleaseIds()
     seen_albums = set()  # Track unique artist-title combinations
     processed_count = 0
     duplicate_count = 0
     review_matches = 0
     
+    # Get total count for progress bar
+    total_releases = len(DiscogsDataset.getAllReleaseIds())
+    
     with open('albumDescriptionDataset.jsonl', 'w') as desc_file, \
          open('albumReviewDataset.jsonl', 'w') as review_file:
         
-        for idNum in tqdm(releaseIds, desc="Processing releases"):
+        for idNum, release in tqdm(DiscogsDataset.iterateReleases(), 
+                                  total=total_releases, 
+                                  desc="Processing releases"):
             try:
-                release = DiscogsDataset.getRelease(idNum)
 
                 # Create unique identifier for this album
                 artist_str = str(getArtistStr(release))
@@ -117,19 +120,20 @@ def createAlbumDescriptionDataset():
                 # Add to seen set
                 seen_albums.add(album_key)
 
+                # Generate release description string once
                 releaseStr = getReleaseDescriptionStr(release)
 
+                # Check language before doing more processing
                 language = langdetect.detect(releaseStr)
                 if language != 'en':
                     continue
 
                 # Write album description dataset
-                trainingStr = getReleaseDescriptionStr(release)
-                trainingJson = {'note': '### '+trainingStr}
+                trainingJson = {'text': releaseStr.strip() + '<|endoftext|>'}
                 desc_file.write(json.dumps(trainingJson) + '\n')
                 processed_count += 1
 
-                # Check for matching review
+                # Check for matching review (normalize once for review matching)
                 artist_norm = normalize_for_matching(artist_str)
                 title_norm = normalize_for_matching(title_str)
                 review_key = (artist_norm, title_norm)
@@ -138,7 +142,7 @@ def createAlbumDescriptionDataset():
                     # Found a matching review, create training pair
                     review_text = reviews_dict[review_key]
                     review_training_json = {
-                        'input': trainingStr.strip(),
+                        'input': releaseStr.strip(),
                         'output': review_text.strip()
                     }
                     review_file.write(json.dumps(review_training_json) + '\n')
@@ -149,7 +153,7 @@ def createAlbumDescriptionDataset():
                     tqdm.write(f"Processed {processed_count} unique albums, skipped {duplicate_count} duplicates, found {review_matches} review matches")
 
             except Exception as e:
-                print(f"{artist_str} - {release['title']}")
+                print(release)
                 traceback.print_exc()
     
     print(f"Final stats: {processed_count} unique albums processed, {duplicate_count} duplicates skipped, {review_matches} review matches found")

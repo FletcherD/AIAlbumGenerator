@@ -14,7 +14,7 @@ modelPath = './finetuned/'
 eosToken = '<|endoftext|>'
 
 #TODO: if artist == Various and tracks > 25
-def processAlbumDescription(text):
+def parseAlbumDescription(text):
     text = text.strip(eosToken)
     text = text.strip()
     lines = text.split('\n')
@@ -39,32 +39,20 @@ def processAlbumDescription(text):
         except:
             continue
     if len(release['tracklist']) == 0:
-        return None
+        raise Exception
 
+    return release
+
+def getTweetText(release):
     s = '{} - {}\n'.format(release['artist'], release['title'])
     s += 'Genre: {}\n'.format(release['genre'])
     s += 'Year: {}\n\n'.format(release['year'])
     s += release['tracklistStr']
-    release['text'] = s
+    return s
 
-    print(release['text'])
 
-    language = langdetect.detect(release['text'])
-    print("Detected language: {}".format(language))
-    if language != 'en':
-        print("Not English language - skipping")
-        return None
 
-    artistPopularity = discogsApi.getArtistPopularity(release['artist'])
-    if artistPopularity > 0:
-        print("ARTIST EXISTS - Popularity: {}".format(artistPopularity))
-        if artistPopularity > 1000:
-            return None
-        else:
-            return release
-    else:
-        print('VALID')
-        return release
+
 
 def getAlbumImagePrompt(release):
     prompt = """{genre} album by {artist} titled '{title}' from {year}, tracks include {firstTracksStr}"""
@@ -84,8 +72,24 @@ def generate():
 
     release = None
     while release is None:
-        release = inferAlbumDescription(tokenizer, generator, temperature=1.3)
-        release = processAlbumDescription(release)
+        releaseDescription = inferAlbumDescription(tokenizer, generator, temperature=1.3)
+        try:
+            release = parseAlbumDescription(releaseDescription)
+        except:
+            continue
+
+        language = langdetect.detect(releaseDescription)
+        print("Detected language: {}".format(language))
+        if language != 'en':
+            continue
+
+        artistPopularity = discogsApi.getArtistPopularity(release['artist'])
+        if artistPopularity > 0:
+            print("Artist exists on Discogs - Popularity: {}".format(artistPopularity))
+            if artistPopularity > 1000:
+                continue
+        else:
+            print('--- Valid release, using ---')
 
     imagePromptStr = getAlbumImagePrompt(release)
     print(imagePromptStr)
@@ -97,11 +101,12 @@ def generate():
 
     trimImage(imagePath)
 
-    releaseText = release['text']
-    while len(releaseText) > 280:
-        releaseText = releaseText.split('\n')
-        releaseText = '\n'.join(releaseText[:-1])
-    twitterApi.createTweet(releaseText, imagePath)
+    tweetText = getTweetText(release)
+    print(tweetText)
+    while len(tweetText) > 280:
+        tweetText = tweetText.split('\n')
+        tweetText = '\n'.join(tweetText[:-1])
+    twitterApi.createTweet(tweetText, imagePath)
 
 if __name__ == '__main__':
     generate()

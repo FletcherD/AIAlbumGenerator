@@ -13,7 +13,6 @@ from inferAlbumArtwork import inferAlbumArtwork
 modelPath = './finetuned/'
 eosToken = '<|endoftext|>'
 
-#TODO: if artist == Various and tracks > 25
 def parseAlbumDescription(text):
     text = text.strip(eosToken)
     text = text.strip()
@@ -49,10 +48,6 @@ def getTweetText(release):
     s += 'Year: {}\n\n'.format(release['year'])
     s += release['tracklistStr']
     return s
-
-
-
-
 
 def getAlbumImagePrompt(release):
     prompt = """{genre} album by {artist} titled '{title}' from {year}, tracks include {firstTracksStr}"""

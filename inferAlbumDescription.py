@@ -2,7 +2,6 @@ import transformers
 import argparse
 import time
 
-from generate import parseAlbumDescription, getAlbumImagePrompt
 
 modelPath = './finetuned/'
 
@@ -11,6 +10,8 @@ def inferAlbumDescription(tokenizer, generator, temperature=1.0):
     return result[0]["generated_text"]
 
 if __name__ == '__main__':
+    from generate import parseAlbumDescription, getAlbumImagePrompt
+
     parser = argparse.ArgumentParser(description='Infer album descriptions using GPT-2')
     parser.add_argument('--temperature', type=float, default=1.0, help='Temperature for text generation (default: 1.0)')
     args = parser.parse_args()

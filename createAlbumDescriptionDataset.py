@@ -54,12 +54,13 @@ def getReleaseDescriptionStr(release):
     r += '{} - {}\n'.format(getArtistStr(release), release['title'])
     r += 'Genre: {}\n'.format(getGenreStr(release))
     r += 'Year: {}\n'.format(release['year'])
-     for track in release['tracklist']:
+    for track in release['tracklist']:
          r += '\t{position}: {title}\n'.format(**track)
     return r
 
 
 def createAlbumDescriptionDataset():
+    releaseIds = DiscogsDataset.getAllReleaseIds()
     with open('albumDescriptionDataset.jsonl', 'w') as f:
         for idNum in tqdm(releaseIds):
             try:
@@ -79,5 +80,4 @@ def createAlbumDescriptionDataset():
 
 
 if __name__ == '__main__':
-    createTextToImageDataset()
-
+    createAlbumDescriptionDataset()

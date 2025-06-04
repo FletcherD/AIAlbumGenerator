@@ -33,7 +33,7 @@ def parseAlbumDescription(text):
     release['tracklistStr'] = ''
     for l in lines[4:]:
         try:
-            release['tracklist'].append(l.split(':')[1].strip())
+            release['tracklist'].append(l.split(': ', maxsplit=1)[1].strip())
             release['tracklistStr'] += '- ' + l.strip() + '\n'
         except:
             continue

@@ -3,7 +3,7 @@ import argparse
 import time
 
 
-modelPath = './finetuned/'
+modelPath = './finetuned'
 
 def inferAlbumDescription(tokenizer, generator, temperature=1.0):
     result = generator(tokenizer.eos_token + '\nArtist:', num_return_sequences=1, temperature=temperature)

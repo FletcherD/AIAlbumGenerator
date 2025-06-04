@@ -42,16 +42,20 @@ def iterateReleases():
 
 def addRelease(idNum, data):
     cur.execute("INSERT INTO releases VALUES (?, ?)", (idNum, json.dumps(data)))
+    commit()
+
+def deleteRelease(idNum) :
+    r = cur.execute("DELETE FROM releases WHERE id=?", [idNum])
+    commit()
+
+
+def commit():
     while True:
         try:
             con.commit()
             break
         except sqlite3.OperationalError as e:
             time.sleep(1)
-
-def deleteRelease(idNum) :
-    r = cur.execute("DELETE FROM releases WHERE id=?", [idNum])
-
 
 def removeBadReleases():
     for idNum in getAllReleaseIds():

@@ -90,14 +90,15 @@ def main():
     # Training arguments
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        overwrite_output_dir=True,
-        num_train_epochs=3,
+        overwrite_output_dir=False,
+        num_train_epochs=10,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=2,
         warmup_steps=100,
         logging_steps=100,
         save_steps=500,
         save_strategy="steps",
+        save_total_limit=5,  # Only keep 5 most recent checkpoints
         dataloader_drop_last=True,
         fp16=torch.cuda.is_available(),  # Use mixed precision if GPU available
         report_to="wandb",
@@ -111,8 +112,24 @@ def main():
         train_dataset=train_dataset,
     )
     
+    # Check for existing checkpoints and resume if available
+    checkpoint_dir = None
+    if os.path.exists(OUTPUT_DIR):
+        checkpoints = [d for d in os.listdir(OUTPUT_DIR) if d.startswith("checkpoint-")]
+        if checkpoints:
+            # Sort by checkpoint number to get the latest
+            checkpoints.sort(key=lambda x: int(x.split("-")[1]))
+            latest_checkpoint = checkpoints[-1]
+            checkpoint_dir = os.path.join(OUTPUT_DIR, latest_checkpoint)
+            print(f"Found checkpoint: {checkpoint_dir}")
+    
     print("Starting training...")
-    trainer.train()
+    if checkpoint_dir:
+        print(f"Resuming from checkpoint: {checkpoint_dir}")
+        trainer.train(resume_from_checkpoint=checkpoint_dir)
+    else:
+        print("Starting training from scratch")
+        trainer.train()
     
     print("Saving final model...")
     trainer.save_model()
@@ -127,13 +144,16 @@ def main():
     
     # Test generation
     model.eval()
+    device = next(model.parameters()).device
     sample_input = "<|album|>Artist: The Beatles\nTitle: Abbey Road\nGenre: Rock\nYear: 1969\n\t1: Come Together\n\t2: Something<|review|>"
     
-    input_ids = tokenizer.encode(sample_input, return_tensors="pt")
+    input_ids = tokenizer.encode(sample_input, return_tensors="pt").to(device)
+    attention_mask = torch.ones_like(input_ids)
     
     with torch.no_grad():
         output = model.generate(
             input_ids,
+            attention_mask=attention_mask,
             max_length=input_ids.shape[1] + 100,
             num_return_sequences=1,
             temperature=0.8,

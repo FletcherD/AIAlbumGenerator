@@ -26,13 +26,13 @@ class RateLimiter:
         # Be more conservative - wait when we have 5 or fewer requests left
         if self.remaining <= 5:
             wait_time = min(60, 10)  # Wait up to 60 seconds, start with 10
-            print(f"Rate limit low ({self.remaining} remaining), waiting {wait_time}s...")
+            print(f"  Rate limit low ({self.remaining} remaining), waiting {wait_time}s...")
             time.sleep(wait_time)
     
     def update_from_headers(self, headers):
         if 'x-discogs-ratelimit-remaining' in headers:
             self.remaining = int(headers['x-discogs-ratelimit-remaining'])
-            print(f"Rate limit: {self.remaining} requests remaining")
+            #print(f"Rate limit: {self.remaining} requests remaining")
 
 rate_limiter = RateLimiter()
 

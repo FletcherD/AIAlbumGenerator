@@ -51,6 +51,9 @@ def main():
     tokenizer = GPT2Tokenizer.from_pretrained(MODEL_NAME)
     model = GPT2LMHeadModel.from_pretrained(MODEL_NAME)
     
+    # Disable weight tying to ensure lm_head.weight is saved separately
+    #model.config.tie_word_embeddings = False
+    
     # Set pad token to eos token
     tokenizer.pad_token = tokenizer.eos_token
     
@@ -85,13 +88,14 @@ def main():
         num_train_epochs=3,
         per_device_train_batch_size=8,  # Larger batch since descriptions are shorter
         gradient_accumulation_steps=2,
-        warmup_steps=500,
+        warmup_steps=100,
         logging_steps=100,
-        save_steps=1000,
+        save_steps=500,
         save_strategy="steps",
+        save_total_limit=5,  # Only keep 5 most recent checkpoints
         dataloader_drop_last=True,
         fp16=torch.cuda.is_available(),  # Use mixed precision if GPU available
-        report_to=wandb
+        report_to="wandb"
     )
     
     # Trainer
@@ -102,8 +106,24 @@ def main():
         train_dataset=train_dataset,
     )
     
+    # Check for existing checkpoints and resume if available
+    checkpoint_dir = None
+    if os.path.exists(OUTPUT_DIR):
+        checkpoints = [d for d in os.listdir(OUTPUT_DIR) if d.startswith("checkpoint-")]
+        if checkpoints:
+            # Sort by checkpoint number to get the latest
+            checkpoints.sort(key=lambda x: int(x.split("-")[1]))
+            latest_checkpoint = checkpoints[-1]
+            checkpoint_dir = os.path.join(OUTPUT_DIR, latest_checkpoint)
+            print(f"Found checkpoint: {checkpoint_dir}")
+    
     print("Starting training...")
-    trainer.train()
+    if checkpoint_dir:
+        print(f"Resuming from checkpoint: {checkpoint_dir}")
+        trainer.train(resume_from_checkpoint=checkpoint_dir)
+    else:
+        print("Starting training from scratch")
+        trainer.train()
     
     print("Saving final model...")
     trainer.save_model()
@@ -118,13 +138,16 @@ def main():
     
     # Test unconditional generation
     model.eval()
+    device = next(model.parameters()).device
     
     with torch.no_grad():
         # Start with just the beginning token for fully unconditional generation
-        input_ids = tokenizer.encode("Artist:", return_tensors="pt")
+        input_ids = tokenizer.encode("Artist:", return_tensors="pt").to(device)
+        attention_mask = torch.ones_like(input_ids)
         
         output = model.generate(
             input_ids,
+            attention_mask=attention_mask,
             max_length=200,
             num_return_sequences=3,
             temperature=0.8,

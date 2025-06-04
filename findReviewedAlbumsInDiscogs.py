@@ -13,12 +13,13 @@ import csv
 import time
 import pandas as pd
 from typing import List, Dict, Optional
+from tqdm import tqdm
 
 import discogsApi
 import DiscogsDataset
 
 # Just for when it gets interrupted
-START_REVIEW = 250
+START_REVIEW = 0
 
 def load_reviews_data(csv_path: str = 'reviews.csv') -> List[Dict[str, str]]:
     """Load reviews data from CSV file."""
@@ -26,7 +27,7 @@ def load_reviews_data(csv_path: str = 'reviews.csv') -> List[Dict[str, str]]:
     
     try:
         df = pd.read_csv(csv_path)
-        for _, row in df.iterrows():
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Loading reviews"):
             reviews.append({
                 'artist': row['artist'],
                 'album': row['album'],
@@ -63,7 +64,7 @@ def search_and_add_album(artist: str, album: str, year: Optional[str] = None) ->
     added_count = 0
     
     # Process each search result
-    for result in search_results[:1]:
+    for result in tqdm(search_results[:1], desc=f"Processing {artist} - {album}", leave=False):
         if 'id' not in result:
             continue
             
@@ -73,26 +74,26 @@ def search_and_add_album(artist: str, album: str, year: Optional[str] = None) ->
         existing_release = DiscogsDataset.getRelease(release_id)
         
         if existing_release is not None:
-            print(f"  Release {release_id} already in database")
+            tqdm.write(f"  Release {release_id} already in database")
             continue
         
         # Fetch full release data from Discogs
-        print(f"  Fetching release {release_id} from Discogs...")
+        tqdm.write(f"  Fetching release {release_id} from Discogs...")
         try:
             release_data = discogsApi.getReleaseInfo(release_id)
             
             # Check if we got valid data
             if 'message' in release_data:
-                print(f"  Error fetching release {release_id}: {release_data['message']}")
+                tqdm.write(f"  Error fetching release {release_id}: {release_data['message']}")
                 continue
             
             # Add to database
             DiscogsDataset.addRelease(release_id, release_data)
-            print(f"  Added release {release_id} to database: {release_data.get('title', 'Unknown Title')}")
+            tqdm.write(f"  Added release {release_id} to database: {release_data.get('title', 'Unknown Title')}")
             added_count += 1
             
         except Exception as e:
-            print(f"  Error processing release {release_id}: {e}")
+            tqdm.write(f"  Error processing release {release_id}: {e}")
             continue
     
     return added_count
@@ -112,23 +113,34 @@ def main():
     total_added = 0
     processed = 0
     
-    for review in reviews[START_REVIEW:]:
+    # Create main progress bar
+    reviews_to_process = reviews[START_REVIEW:]
+    pbar = tqdm(reviews_to_process, desc="Processing albums", unit="album")
+    
+    for review in pbar:
         artist = review['artist']
         album = review['album']
         year = review['year_released']
+        
+        # Update progress bar description
+        pbar.set_description(f"Processing: {artist} - {album}"[:60] + "...")
         
         try:
             added = search_and_add_album(artist, album, year)
             total_added += added
             processed += 1
             
-            print(f"Progress: {processed}/{len(reviews)} albums processed, {total_added} releases added")
+            # Update progress bar postfix with stats
+            pbar.set_postfix({
+                'Added': total_added,
+                'Processed': processed
+            })
             
         except KeyboardInterrupt:
-            print("\nInterrupted by user. Exiting...")
+            tqdm.write("\nInterrupted by user. Exiting...")
             break
         except Exception as e:
-            print(f"Error processing {artist} - {album}: {e}")
+            tqdm.write(f"Error processing {artist} - {album}: {e}")
             continue
     
     print(f"\nCompleted! Processed {processed} albums, added {total_added} new releases to database.")
